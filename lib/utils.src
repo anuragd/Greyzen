@@ -1,0 +1,114 @@
+parse_vuln_string = function(data)
+	values = []
+	strings = data.split("Unsafe check: ")
+
+	for string in strings
+		if string == strings[0] then
+			continue
+		end if
+
+		value = string[string.indexOf("<b>") + 3 : string.indexOf("</b>")]
+		values = values + [value]
+	end for
+
+	return values
+end function
+
+scan = function(lib)
+	addresses = meta.scan(lib)
+	result = []
+
+	for add in addresses
+		vuln = meta.scan_address(lib, add)
+		result.push({"address": add, "vuln": parse_vuln_string(vuln)})
+	end for
+
+	return result
+end function
+
+assess_vulns = function(vulns)
+	extraarg=user_input("Add extra argument for overflow: ")
+	for vuln in vulns
+		for v in vuln.vuln
+			result = "VULNS"+char(10)+"-----------------------"
+			print(vuln.address + " : " + v)
+			flow = lib.overflow(vuln.address, v, extraarg)
+			result = result + char(10) + vuln.address + " : " + v + " : " + typeof(flow)
+			result = result + char(10) + "-----------------------"
+			if (typeof(flow) == "file") then
+				get_user_files(flow)
+				dump_passwd(flow)
+			else if typeof(flow) == "computer" then
+				file = flow.File("/etc/passwd")
+				if file then
+					print(file.get_content)
+					get_user_files(file)
+					dump_passwd(file)
+				end if
+			else if (typeof(flow) == "shell") then
+				start_shell = user_input("Start shell? (y/n)")
+				if start_shell == "y" then flow.start_terminal
+			end if
+		end for
+		print(result)
+	end for
+	write_db(vulns, lib)
+end function
+
+dump_passwd = function(flow)
+	while true
+		if (flow.path == "/") then
+			break
+		end if
+		flow = flow.parent
+	end while
+
+	for f in flow.get_folders
+		if (f.name == "etc") then
+			a = f.get_files
+
+			for x in a
+				if (x.name == "passwd") then
+					print(x.get_content)
+				end if
+
+			end for
+		end if
+
+	end for
+
+end function
+
+get_user_files = function(flow)
+	while true
+		if (flow.path == "/") then
+			break
+		end if
+		flow = flow.parent
+	end while
+
+	for f in flow.get_folders
+		if (f.name == "home") then
+			users = f.get_folders
+
+			for u in users
+				print(u.name)
+				a = u.get_folders
+
+				for x in a
+					if (x.name == "Config") then
+						final = x.get_files
+
+						for res in final
+							print(res.get_content)
+						end for
+					end if
+
+				end for
+
+			end for
+		end if
+
+	end for
+
+end function

@@ -1,0 +1,15 @@
+meta = include_lib("/lib/metaxploit.so")
+crypto = include_lib("/lib/crypto.so")
+if(params.len != 1) then
+	print("usage: cracker [file path]")
+end if
+pc = get_shell().host_computer
+file = pc.File(params[0])
+data = file.get_content
+strings = data.split(char(10))
+for s in strings
+	a = s.split(":")
+	result = crypto.decipher(a[1])
+	print(a[0] + " : " + result)
+end for
+

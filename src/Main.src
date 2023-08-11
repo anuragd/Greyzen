@@ -1,0 +1,55 @@
+import_code("../lib/dbman.src")
+import_code("../lib/utils.src")
+meta = include_lib("/lib/metaxploit.so")
+db = load_db()
+ip = false
+port = false
+lib = false
+file = false
+if not meta then
+	meta = include_lib(current_path + "/metaxploit.so")
+end if
+
+if params.len == 0 or params.len > 2 or params[0] == "--help" then
+	exit("program [target-ip] [target-port]")
+else if params.len == 2 then
+	ip = params[0]
+	port = params[1].to_int
+else if params[0].split(".").len == 4 then
+	ip = params[0]
+	port = false
+else
+	file = get_shell.host_computer.File(params[0])
+	if not file then
+		file = get_shell.host_computer.File(current_path + "/" + params[0])
+		if not file then
+			exit("Invalid IP or File not found")
+		end if
+	end if
+end if
+
+if file then
+	lib = meta.load(file.path)
+else
+	if port then
+		session = meta.net_use(ip, port)
+	else
+		session = meta.net_use(ip)
+	end if
+	if not session then
+		exit("Could not connect to target")
+	else
+		lib = session.dump_lib
+	end if
+end if
+print("Library : " + lib.lib_name + " v" + lib.version)
+print("Checking vulndb....")
+vulns = check_db(db,lib)
+if vulns then
+	print("Library and version found in vulndb")
+	assess_vulns(vulns)
+else
+	print("Unknown Library")
+	vulns = scan(lib)
+	assess_vulns(vulns)
+end if

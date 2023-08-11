@@ -1,0 +1,78 @@
+write_db = function(vulns,lib)
+	computer = get_shell.host_computer
+	file = computer.File(current_path + "/vulndb")
+	if not file then
+		computer.touch(current_path,"vulndb")
+		file = computer.File(current_path + "/vulndb")
+	end if
+	content = file.get_content
+	libstring = lib.lib_name + char(9) + lib.version + char(9)
+	newvuln = "VULNDB"
+	for vuln in vulns
+		for v in vuln.vuln
+			newvuln = newvuln + libstring + vuln.address + char(9) + v + char(10)
+		end for
+	end for
+	content = content + char(10) + newvuln
+	file.set_content(content)
+end function
+
+load_db = function()
+	computer = get_shell.host_computer
+	file = computer.File(current_path + "/vulndb")
+	if not file then
+		path = user_input("Enter path of vulndb file: ")
+		if path then file = computer.File(path)
+		if not file then
+			print("Could not load vuln db")
+			return({})
+		end if
+	end if
+	content = file.get_content
+	lines = content.split(char(10))
+	db = {}
+	for line in lines
+		parts = line.split(char(9))
+		if(not parts.len == 4) then
+			continue
+		end if
+		//library name
+		if(not db.hasIndex(parts[0])) then
+			db[parts[0]] = {parts[1]:{parts[2]:[parts[3]]}}
+		else
+			//library version
+			if not db[parts[0]].hasIndex(parts[1]) then
+				db[parts[0]][parts[1]] = {parts[2]:[parts[3]]}
+			else 
+				//address
+				if not db[parts[0]][parts[1]].hasIndex(parts[2]) then
+					db[parts[0]][parts[1]][parts[2]] = [parts[3]]
+				else
+					db[parts[0]][parts[1]][parts[2]].push(parts[3])
+				end if
+			end if
+		end if
+	end for
+	return(db)
+end function
+
+check_db = function(db,lib)
+	if not db.hasIndex(lib.lib_name) then
+		print("Unknown library")
+		return false
+	else if not db[lib.lib_name].hasIndex(lib.version) then
+		print("Unknown version number " + lib.version + " for " + lib.lib_name)
+		return false
+	end if
+	vulns = []
+	addresses = db[lib.lib_name][lib.version].indexes
+	for address in addresses
+		item = {"address": address, "vuln":[]}
+		for name in db[lib.lib_name][lib.version][address]
+			item.vuln.push(name)
+		end for
+		vulns.push(item)
+	end for
+	return vulns
+end function
+	
