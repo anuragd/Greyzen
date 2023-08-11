@@ -2,6 +2,8 @@
 
 Greyzen is a hacking tool designed for the game Grey Hack. It is capable of hacking into almost anything by scanning libraries and attempting overflows. As you use it, it keeps track of all known vulnerabilities in a generated file called vulndb. This file enables the program to be even faster in its tasks when it comes across a library it has seen before.
 
+Works on Game Engine v0.8
+
 # Installation
 
 To use Greyzen in-game, follow these steps:
